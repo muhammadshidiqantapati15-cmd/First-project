@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grade App</title>
+  <meta charset="utf-8">
+</head>
+<body>
+  <h2>Grade Calculator</h2>
+  <form id="gradeForm">
+    Name: <input id="name" required>
+    Score: <input id="score" type="number" min="0" max="100" required>
+    <button type="submit">Calculate</button>
+  </form>
+  <div id="result"></div>
+  <h3>History</h3>
+  <table id="historyTable" border="1">
+    <thead>
+      <tr><th>Name</th><th>Score</th><th>Grade</th><th>Delete</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <h3>Statistics</h3>
+  <pre id="stats"></pre>
+  <script>
+    document.getElementById('gradeForm').onsubmit = async function(e){
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const score = document.getElementById('score').value;
+      const res = await fetch('/api/hitung-grade', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({name, score})
+      });
+      const data = await res.json();
+      if(data.error) document.getElementById('result').innerText = data.error;
+      else {
+        document.getElementById('result').innerText = `Grade: ${data.grade}`;
+        loadHistory(); loadStats();
+      }
+    };
+    async function loadHistory() {
+      const res = await fetch('/api/get-riwayat'); const list = await res.json();
+      document.querySelector('#historyTable tbody').innerHTML =
+        list.map(r => `<tr>
+        <td>${r.name}</td><td>${r.score}</td><td>${r.grade}</td>
+        <td><button onclick="deleteRecord('${r.id}')">Delete</button></td>
+        </tr>`).join('');
+    }
+    async function deleteRecord(id) {
+      await fetch('/api/hapus-riwayat/'+id,{method:'DELETE'});
+      loadHistory();loadStats();
+    }
+    async function loadStats() {
+      const res = await fetch('/api/statistik');
+      const stats = await res.json();
+      document.getElementById('stats').innerText =
+        Object.entries(stats).map(([k,v]) => `${k}: ${v}`).join('\n');
+    }
+    loadHistory(); loadStats();
+  </script>
+</body>
+</html>
